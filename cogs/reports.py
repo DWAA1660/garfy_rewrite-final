@@ -1,11 +1,7 @@
-import datetime
-import pymongo as pymongo
-import asyncio
-from nextcord import Interaction, SlashOption, ChannelType, slash_command, guild, Guild
+import motor
+from motor import motor_asyncio
+from nextcord import SlashOption, ChannelType
 from nextcord.abc import GuildChannel
-import os
-import humanfriendly
-import motor.motor_asyncio
 import nextcord
 from nextcord import Interaction, slash_command
 from nextcord.ext import commands, application_checks
@@ -22,6 +18,7 @@ cluster = motor.motor_asyncio.AsyncIOMotorClient(cluster_local)
 db = cluster["VenoxDB"]
 collection = db["report_channels"]
 
+
 class reports(commands.Cog):
 
     def __init__(self, client):
@@ -29,12 +26,13 @@ class reports(commands.Cog):
 
     @application_checks.has_permissions(manage_guild=True)
     @slash_command(description="Setup the report command")
-    async def reportsetup(self, interaction: Interaction, report_channel_id):
+    async def reportsetup(self, interaction: Interaction,
+                          report_channel: GuildChannel = SlashOption(channel_types=[ChannelType.text])):
         ctxchannel = interaction.channel.id
         channelfletched = await client.fetch_channel(ctxchannel)
         try:
             ctxguild_id = str(interaction.guild.id)
-            data = {"_id": ctxguild_id, "guildid": ctxguild_id, "reports_id": report_channel_id}
+            data = {"_id": ctxguild_id, "guildid": ctxguild_id, "reports_id": report_channel.id}
             await collection.insert_one(data)
             await interaction.send("Report channel setup!")
         except:
@@ -57,8 +55,10 @@ class reports(commands.Cog):
             ctxguild_id = str(interaction.guild.id)
             results = await collection.find_one({"_id": ctxguild_id})
             server_report_channel = await client.fetch_channel(results["reports_id"])
-            await server_report_channel.send(
-                f"`{interaction.user}` has reported `{member}`  in channel `{interaction.channel.name}` for reason `{reason}`")
+            em = nextcord.Embed(title="New report!", description=f"{interaction.user} has reported {member.name}", color=0xe37e00)
+            em.add_field(name="Channel", value=interaction.channel.name)
+            em.add_field(name="Reason", value=reason)
+            await server_report_channel.send(embed=em)
             log_channel = await client.fetch_channel(channel_id)
             await log_channel.send(
                 f"`{interaction.user}` has reported `{member}`  in channel `{interaction.channel.name}` for reason `{reason}`")

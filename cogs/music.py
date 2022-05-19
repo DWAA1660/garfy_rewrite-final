@@ -3,6 +3,7 @@ from nextcord import Interaction, SlashOption, ChannelType, slash_command
 from nextcord.abc import GuildChannel
 from nextcord.ext import commands
 import wavelink
+from wavelink.ext import spotify
 
 
 class music(commands.Cog):
@@ -16,12 +17,45 @@ class music(commands.Cog):
         await wavelink.NodePool.create_node(bot=self.bot,
                                             host='lavalink.houseofgamers.xyz',
                                             port=2333,
-                                            password='lavalink')
+                                            password='lavalink',
+                                            spotify_client=spotify.SpotifyClient(
+                                                client_id="7367bf571fa548408060137809f08f53",
+                                                client_secret="560fc5351d3f46f091b6eccc115bdf06"))
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, node: wavelink.Node):
         print(f"node {node.identifier} is ready!!!")
 
+    # SPOTIFY HERE
+    @slash_command(description="Play a song from spotify")
+    async def splay(self, interaction: Interaction,
+                    channel: GuildChannel = SlashOption(channel_types=[ChannelType.voice],
+                                                        description="Voice channel countrol"), *,
+                    search: str = SlashOption(description='Song name')):
+        if not interaction.guild.voice_client:
+            vc: wavelink.Player = await channel.connect(cls=wavelink.Player)
+        elif not getattr(interaction.user.voice, "channel", None):
+            return await interaction.response.send_message("Join a voice channel  first")
+        else:
+            vc: wavelink.Player() = interaction.guild.voice_client
+
+        if vc.queue.is_empty and not vc.is_playing():
+            try:
+                track = await spotify.SpotifyTrack.search(query=search, return_first=True)
+                await vc.play(track)
+                await interaction.guild.change_voice_state(channel=channel, self_mute=False, self_deaf=True)
+                await interaction.send(f"Now playing `{track.title}`")
+            except Exception as e:
+                await interaction.send("Please enter a spotify **song url**")
+                return print(e)
+        else:
+            await vc.queue.put_wait(search)
+            await interaction.guild.change_voice_state(channel=channel, self_mute=False, self_deaf=True)
+            await interaction.response.send_message(f"Added `{search.title}` to the queue")
+        vc.interaction = interaction
+        setattr(vc, "loop", False)
+
+    # YOUTUBE BEGINS
     @slash_command()
     async def play(self, interaction: Interaction,
                    channel: GuildChannel = SlashOption(channel_types=[ChannelType.voice],
@@ -108,6 +142,7 @@ class music(commands.Cog):
         await vc.disconnect()
         await interaction.send("Disconnected")
 
+    # track event
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, player: wavelink.Player, track: wavelink.Track, reason="None"):
         interaction = player.interaction
@@ -150,15 +185,15 @@ class music(commands.Cog):
         else:
             vc: wavelink.Player() = interaction.guild.voice_client
 
-        if vc.queue.is_empty and not vc.is_playing:
-            return await interaction.send("Queue is empty")
+        if vc.queue.is_empty:
+            return await interaction.send("Queue is empty use `/play` to add to queue")
         else:
-            embed = nextcord.Embed(title="Queue")
+            embed = nextcord.Embed(title="Queue", color=0xe37e00)
             song_count = 0
             queue = vc.queue.copy()
             for song in queue:
                 song_count += 1
-                embed.add_field(name=f"Song Num {song_count}", value=f"{song.title}")
+                embed.add_field(name=f"Song Num `{song_count}`", value=f"`{song.title}`")
             await interaction.send(embed=embed)
 
 

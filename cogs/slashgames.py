@@ -1,22 +1,16 @@
-from nextcord.ext import tasks, commands
-from asyncio.tasks import wait_for
-from sys import prefix
+from nextcord.ext import commands
 import nextcord
-from nextcord import Interaction, SlashOption, ChannelType
-from nextcord.abc import GuildChannel
+from nextcord import Interaction
 from nextcord import slash_command
-from googlesearch import search
+import _google as google
 from better_profanity import profanity
 from dadjokes import Dadjoke
 import random
 import randfacts
 
-import json
-
-import urllib
-
 
 #got it working :D
+
 
 class slash(commands.Cog):
 
@@ -39,10 +33,6 @@ class slash(commands.Cog):
     #helpfull nextcord examples with slash commands and stuff
 
     #this command is full working
-    @slash_command()
-    async def repeat(self, interaction : Interaction, message):
-      await interaction.response.send_message(message)
-    
 
     #this command is fully working
     @slash_command()
@@ -80,16 +70,22 @@ class slash(commands.Cog):
       await interaction.send(f"{member} just got slapped by a fish https://tenor.com/view/fish-slap-w2s-slap-funny-sidemen-gif-20599048")
 
     @slash_command()
-    async def google(self, interaction : Interaction, amount, *, query):
-      embed = nextcord.Embed(title="Google Results For: "+query, url="https://google.com", description=" ", color=0x4d7cff)
-      amount = int(amount)
-      if amount > 10:
-        amount = 10
-      for i in search(query, tld="co.in", num=amount, stop=amount, pause=2):
-        embed.add_field(name=query, value=i, inline=True)
-      await interaction.send(embed=embed)
+    async def google(self, interaction: Interaction, *, query):
+        ignore = ["kill", "die", "death", "lmao", "len", "stupid", ]  # Ignores these words
+        profanity.load_censor_words(whitelist_words=ignore)
+        if profanity.contains_profanity(query):
+            await interaction.send("That word is banned")
 
+        else:
+            embed = nextcord.Embed(title="Google Results For: " + query, url="https://google.com", description=" ",
+                                       color=0x4d7cff)
+            results = google.search(query)
+            v = ""
+            for r in results:
+                v += f"{r}\n"
 
+            embed.add_field(name="-----", value=v, inline=True)
+            await interaction.send(embed=embed)
 
     @slash_command()
     async def qq(self, interaction : Interaction, *, person="your"):
@@ -108,19 +104,6 @@ class slash(commands.Cog):
       await interaction.send(embed=embed)
 
 
-
-    @slash_command()
-    async def meme(self, interaction : Interaction):
-      memeApi = urllib.request.urlopen('https://meme-api.herokuapp.com/gimme')
-      memeData = json.load(memeApi)
-      memeUrl = memeData['url']
-      memeName = memeData['title']
-      memePoster = memeData['author']
-
-      embed=nextcord.Embed(title=memeName, color=0x4287f5)
-      embed.set_image(url=memeUrl)
-      embed.set_footer(text=f"Meme By: " + memePoster)
-      await interaction.send(embed=embed)
 
     @slash_command()
     async def dadjoke(self, interation : Interaction):
