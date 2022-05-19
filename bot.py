@@ -7,14 +7,10 @@ import nextcord
 from nextcord import slash_command, Interaction
 from nextcord.ext import commands
 
-with open("soontobeconfig.txt") as f:
-    TOKEN = f.readlines()[1]
-with open("soontobeconfig.txt") as f:
-    CLUSTER = f.readlines()[3]
-with open("soontobeconfig.txt") as f:
-    Global_Report_Channel = f.readlines()[5]
-with open("soontobeconfig.txt") as f:
-    Global_Log_Channel = f.readlines()[7]
+TOKEN = os.getenv("TOKEN")
+CLUSTER = os.getenv("CLUSTER")
+Global_Report_Channel = os.getenv("Global_Report_Channel")
+Global_Log_Channel = os.getenv("Global_Log_Channel")
 
 intents = nextcord.Intents.default()
 intents.members = True
